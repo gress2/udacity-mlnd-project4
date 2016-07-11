@@ -16,8 +16,8 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         self.Q = {}
-        self.gamma = .5
-        self.epsilon = .1
+        self.gamma = .5 # don't learn TOO much, but avoid doing too little (or no) learning
+        self.epsilon = .1 # avoid local maxima
         self.prev = {'state': None, 'action': None, 'reward': None}
 
     def reset(self, destination=None):
@@ -32,6 +32,11 @@ class LearningAgent(Agent):
        	action_choices = (None, 'forward', 'left', 'right')
         action = self.next_waypoint
 
+        """
+        we don't use deadline here as it greatly increases dimensionality.
+        dimensionality aside, its not very useful to us since we dont know how
+        far from the destination we are at any point in time.
+        """
         state = str((('light', inputs['light']), ('oncoming', inputs['oncoming']),
             ('right', inputs['right']), ('left', inputs['left']), ('waypoint', self.next_waypoint)))
 
@@ -40,12 +45,26 @@ class LearningAgent(Agent):
         else:
             q_actions = self.addQState(state)
 
+        """
+        use epsilon greedy here where epsilon is .1. that is, if a random draw
+        on U[0,1] < epsilon, take a random action. otherwise, use the action
+        with highest Q value
+        """
         if random.random() < self.epsilon:
             action_roll = random.randint(0, 3)
             action = q_actions.keys()[action_roll]
         else:
             action = max(q_actions.iteritems(), key=operator.itemgetter(1))[0]
 
+
+        """
+        Q(s,a) <- r + gamma * max_a'(Q(s', a'))
+        since we don't really have a transition function in this instance, we
+        cannot directly determine which state each of our possible actions will
+        take us to. to get around this, we keep track of what the previous reward,
+        state, and action were and then update the Q value for the previous
+        sttate action pair when we arrive at the new state, s'.
+        """
         if self.prev['state'] != None:
             # max Q(s',a')
             q_action_max = q_actions[action]
@@ -74,7 +93,7 @@ def run():
     sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-    sim.run(n_trials=1000)  # run for a specified number of trials
+    sim.run(n_trials=10000)  # run for a specified number of trials
     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
 
