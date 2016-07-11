@@ -16,7 +16,7 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         self.Q = {}
-        self.gamma = .5 # don't learn TOO much, but avoid doing too little (or no) learning
+        self.gamma = .5
         self.epsilon = .1 # avoid local maxima
         self.prev = {'state': None, 'action': None, 'reward': None}
 
@@ -93,7 +93,7 @@ def run():
     sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-    sim.run(n_trials=10000)  # run for a specified number of trials
+    sim.run(n_trials=100)  # run for a specified number of trials
     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
 
 
