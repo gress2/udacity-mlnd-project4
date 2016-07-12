@@ -16,9 +16,11 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         self.Q = {}
-        self.gamma = .5
+        self.alpha = .5
+        self.gamma = .3
         self.epsilon = .1 # avoid local maxima
         self.prev = {'state': None, 'action': None, 'reward': None}
+        self.state = None
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
@@ -37,13 +39,13 @@ class LearningAgent(Agent):
         dimensionality aside, its not very useful to us since we dont know how
         far from the destination we are at any point in time.
         """
-        state = str((('light', inputs['light']), ('oncoming', inputs['oncoming']),
+        self.state = str((('light', inputs['light']), ('oncoming', inputs['oncoming']),
             ('right', inputs['right']), ('left', inputs['left']), ('waypoint', self.next_waypoint)))
 
-        if state in self.Q:
-            q_actions = self.Q[state]
+        if self.state in self.Q:
+            q_actions = self.Q[self.state]
         else:
-            q_actions = self.addQState(state)
+            q_actions = self.addQState(self.state)
 
         """
         use epsilon greedy here where epsilon is .1. that is, if a random draw
@@ -58,7 +60,6 @@ class LearningAgent(Agent):
 
 
         """
-        Q(s,a) <- r + gamma * max_a'(Q(s', a'))
         since we don't really have a transition function in this instance, we
         cannot directly determine which state each of our possible actions will
         take us to. to get around this, we keep track of what the previous reward,
@@ -68,13 +69,15 @@ class LearningAgent(Agent):
         if self.prev['state'] != None:
             # max Q(s',a')
             q_action_max = q_actions[action]
-            q_prev = self.prev['reward'] + (self.gamma * q_action_max)
+            # Q(s,a) <- (1 - a) * Q(s,a) + a * (r + gamma * max_a'(Q(s', a')))
+            q_prev = ((1 - self.alpha) * self.Q[self.prev['state']][self.prev['action']]) + \
+                (self.alpha * (self.prev['reward'] + (self.gamma * q_action_max)))
             self.Q[self.prev['state']][self.prev['action']] = q_prev
 
         # Execute action and get reward
         reward = self.env.act(self, action)
         self.prev['reward'] = reward
-        self.prev['state'] = state
+        self.prev['state'] = self.state
         self.prev['action'] = action
 
         print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
@@ -90,7 +93,7 @@ def run():
     # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
     # Now simulate it
-    sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
+    sim = Simulator(e, update_delay=2, display=True)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
     sim.run(n_trials=100)  # run for a specified number of trials
